@@ -14,6 +14,8 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     @IBOutlet weak var tableView: UITableView!
     
     @IBOutlet weak var searchBarField: UISearchBar!
+    
+    var searchResult = [String]()
     // Realmインスタンスを取得する
     let realm = try! Realm()
     
@@ -32,20 +34,30 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         tableView.delegate = self
         tableView.dataSource = self
         searchBarField.delegate = self
-        searchBarField.showsCancelButton = true
+        searchBarField.placeholder = "検索"
+        searchBarField.showsCancelButton = false
         searchBarField.enablesReturnKeyAutomatically = false
-        searchBarField.enablesReturnKeyAutomatically = true
+        searchBarField.tintColor = UIColor.red
+        
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
     }
 
     // データの数（＝セルの数）を返すメソッド
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return taskArray.count
+       
+            return taskArray.count
+        
     }
     
     // 各セルの内容を返すメソッド
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         // 再利用可能なCellを得る
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        
+       
         
         // Cellに値を設定する
         let task = taskArray[indexPath.row]
@@ -60,26 +72,38 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         return cell
     }
     
+    // 検索ボタンが押された時によばれる
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        
-        searchBar.endEditing(true)
-        
+        searchBar.showsCancelButton = true
+        searchBarField.enablesReturnKeyAutomatically = true
+        searchBarField.endEditing(true)
+    
+       
         guard let searchText = searchBar.text else {return}
         
+        // 条件として、検索文字がcategoryと一致するものを検索する
+        taskArray = realm.objects(Task.self).filter("category BEGINSWITH  '\(searchText)'")
+
+        searchBar.showsCancelButton = false
+       
+        self.tableView.reloadData()
         
-        let result = realm.objects(Task.self).filter("category BEGINSWITH  '\(searchText)'")
-        
-        
-        
-        let count = result.count
-        
-        if(count == 0) {
-            taskArray = realm.objects(Task.self)
-        } else {
-            taskArray = result
-        }
+    }
+    
+    // キャンセルボタンが押された時に呼ばれる
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.showsCancelButton = true
+        taskArray = try! Realm().objects(Task.self).sorted(byKeyPath: "date", ascending: true)
         tableView.reloadData()
     }
+    
+    // テキストフィールド入力開始前に呼ばれる
+    func searchBarShouldBeginEditing(_ searchBar: UISearchBar) -> Bool {
+        searchBar.showsCancelButton = true
+        return true
+    }
+    
+    
     
     // 各セルを選択した時に実行されるメソッド
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
